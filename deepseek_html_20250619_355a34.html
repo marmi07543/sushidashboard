@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализ рынка суши в Омске</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+        }
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab button {
+            background-color: inherit;
+            float: left;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
+            font-size: 16px;
+        }
+        .tab button:hover {
+            background-color: #ddd;
+        }
+        .tab button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tabcontent {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            animation: fadeEffect 1s;
+        }
+        @keyframes fadeEffect {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .chart {
+            width: 48%;
+            margin-bottom: 30px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+        }
+        .filter-container {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        select, input {
+            padding: 8px;
+            margin-right: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .full-width {
+            width: 100%;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .data-table th {
+            background-color: #f2f2f2;
+        }
+        .data-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .summary-card {
+            background-color: #e9f7ef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Анализ рынка суши в Омске</h1>
+        
+        <div class="tab">
+            <button class="tablinks active" onclick="openTab(event, 'overview')">Обзор</button>
+            <button class="tablinks" onclick="openTab(event, 'restaurants')">Рестораны</button>
+            <button class="tablinks" onclick="openTab(event, 'prices')">Цены</button>
+            <button class="tablinks" onclick="openTab(event, 'consumers')">Потребители</button>
+            <button class="tablinks" onclick="openTab(event, 'rawdata')">Исходные данные</button>
+        </div>
+        
+        <div id="overview" class="tabcontent" style="display: block;">
+            <h2>Ключевые показатели рынка суши в Омске</h2>
+            
+            <div class="summary-card">
+                <h3>Основные выводы:</h3>
+                <ul>
+                    <li>Наиболее популярные суши-рестораны: Японский домик, Суши маркет, Суши мастер</li>
+                    <li>Основная цель посещения: провести время с друзьями (177 человек)</li>
+                    <li>Частота посещения: 1-2 раза в месяц (264 человека)</li>
+                    <li>Средняя справедливая цена за порцию "Калифорнии": 199-249 руб.</li>
+                    <li>Наиболее важные характеристики: размер порции (24%), качество суши (22%)</li>
+                </ul>
+            </div>
+            
+            <div class="chart-container">
+                <div id="visitPurposeChart" class="chart"></div>
+                <div id="visitFrequencyChart" class="chart"></div>
+                <div id="satisfactionChart" class="chart full-width"></div>
+            </div>
+        </div>
+        
+        <div id="restaurants" class="tabcontent">
+            <h2>Анализ суши-ресторанов</h2>
+            
+            <div class="filter-container">
+                <label for="restaurantFilter">Выберите ресторан:</label>
+                <select id="restaurantFilter">
+                    <option value="all">Все рестораны</option>
+                    <option value="Японский домик">Японский домик</option>
+                    <option value="Суши маркет">Суши маркет</option>
+                    <option value="Суши мастер">Суши мастер</option>
+                    <option value="Япончик">Япончик</option>
+                    <option value="Зебры">Зебры</option>
+                    <option value="Бамбуши">Бамбуши</option>
+                </select>
+                <button onclick="updateRestaurantCharts()">Применить</button>
+            </div>
+            
+            <div class="chart-container">
+                <div id="knownRestaurantsChart" class="chart"></div>
+                <div id="visitedRestaurantsChart" class="chart"></div>
+                <div id="mostVisitedChart" class="chart"></div>
+                <div id="restaurantSatisfactionChart" class="chart full-width"></div>
+            </div>
+        </div>
+        
+        <div id="prices" class="tabcontent">
+            <h2>Анализ ценовой политики</h2>
+            
+            <div class="filter-container">
+                <label for="priceRange">Диапазон цен (руб.):</label>
+                <input type="number" id="minPrice" placeholder="Мин" value="100">
+                <input type="number" id="maxPrice" placeholder="Макс" value="400">
+                <button onclick="updatePriceCharts()">Применить</button>
+            </div>
+            
+            <div class="chart-container">
+                <div id="priceThresholdsChart" class="chart"></div>
+                <div id="fairPriceChart" class="chart"></div>
+                <div id="priceImportanceChart" class="chart full-width"></div>
+            </div>
+        </div>
+        
+        <div id="consumers" class="tabcontent">
+            <h2>Профиль потребителей</h2>
+            
+            <div class="filter-container">
+                <label for="genderFilter">Пол:</label>
+                <select id="genderFilter">
+                    <option value="all">Все</option>
+                    <option value="Мужской">Мужской</option>
+                    <option value="Женский">Женский</option>
+                </select>
+                
+                <label for="ageFilter">Возраст:</label>
+                <select id="ageFilter">
+                    <option value="all">Все</option>
+                    <option value="18-24">18-24</option>
+                    <option value="25-34">25-34</option>
+                    <option value="35-44">35-44</option>
+                    <option value="45-54">45-54</option>
+                    <option value="55-64">55-64</option>
+                    <option value="Больше 65">65+</option>
+                </select>
+                
+                <label for="incomeFilter">Доход:</label>
+                <select id="incomeFilter">
+                    <option value="all">Все</option>
+                    <option value="12 000-19 000">12-19 тыс.</option>
+                    <option value="20 000-29 000">20-29 тыс.</option>
+                    <option value="30 000-39 000">30-39 тыс.</option>
+                    <option value="40 000-49 000">40-49 тыс.</option>
+                    <option value="50 000-59 000">50-59 тыс.</option>
+                    <option value="Более 60 000">60+ тыс.</option>
+                </select>
+                
+                <button onclick="updateConsumerCharts()">Применить</button>
+            </div>
+            
+            <div class="chart-container">
+                <div id="genderChart" class="chart"></div>
+                <div id="ageChart" class="chart"></div>
+                <div id="incomeChart" class="chart"></div>
+                <div id="sushiPreferenceChart" class="chart full-width"></div>
+            </div>
+        </div>
+        
+        <div id="rawdata" class="tabcontent">
+            <h2>Исходные данные</h2>
+            
+            <div class="filter-container">
+                <label for="dataType">Выберите данные:</label>
+                <select id="dataType" onchange="loadDataTable()">
+                    <option value="results">Результаты опроса</option>
+                    <option value="consumers">Профиль потребителей</option>
+                </select>
+            </div>
+            
+            <div id="dataTableContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Функция для переключения вкладок
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+            
+            // Обновляем графики при переключении вкладок
+            if (tabName === 'overview') {
+                updateOverviewCharts();
+            } else if (tabName === 'restaurants') {
+                updateRestaurantCharts();
+            } else if (tabName === 'prices') {
+                updatePriceCharts();
+            } else if (tabName === 'consumers') {
+                updateConsumerCharts();
+            } else if (tabName === 'rawdata') {
+                loadDataTable();
+            }
+        }
+        
+        // Данные для графиков (в реальном проекте можно загружать из файла)
+        const surveyData = {
+            visitPurpose: [
+                {purpose: "Провести время с друзьями", count: 177},
+                {purpose: "Не хочется готовить", count: 79},
+                {purpose: "Попробовать что-то новое", count: 93}
+            ],
+            visitFrequency: [
+                {frequency: "1-2 раза в месяц", count: 264},
+                {frequency: "Каждый день", count: 29},
+                {frequency: "Чаще 3 раз в месяц", count: 56}
+            ],
+            knownRestaurants: [
+                {name: "Японский домик", count: 51},
+                {name: "Суши маркет", count: 46},
+                {name: "Суши мастер", count: 40},
+                {name: "Зебры", count: 38},
+                {name: "Япончик", count: 35},
+                {name: "Бамбуши", count: 30},
+                {name: "Экспресс Суши", count: 28},
+                {name: "Киото", count: 27},
+                {name: "Суши Кайфуши", count: 26},
+                {name: "Суши дом", count: 21},
+                {name: "Кушай суши", count: 7}
+            ],
+            visitedRestaurants: [
+                {name: "Японский домик", count: 99},
+                {name: "Суши маркет", count: 49},
+                {name: "Суши мастер", count: 40},
+                {name: "Япончик", count: 39},
+                {name: "Зебры", count: 34},
+                {name: "Бамбуши", count: 20},
+                {name: "Суши Кайфуши", count: 20},
+                {name: "Экспресс Суши", count: 18},
+                {name: "Суши дом", count: 15},
+                {name: "Киото", count: 10},
+                {name: "Кушай суши", count: 5}
+            ],
+            mostVisitedRestaurants: [
+                {name: "Японский домик", count: 124},
+                {name: "Суши маркет", count: 46},
+                {name: "Япончик", count: 37},
+                {name: "Экспресс Суши", count: 25},
+                {name: "Зебры", count: 24},
+                {name: "Суши мастер", count: 21},
+                {name: "Бамбуши", count: 17},
+                {name: "Суши Кайфуши", count: 19},
+                {name: "Суши дом", count: 14},
+                {name: "Киото", count: 12},
+                {name: "Кушай суши", count: 10}
+            ],
+            satisfaction: [
+                {level: "Полностью удовлетворен", count: 161},
+                {level: "Скорее удовлетворен", count: 157},
+                {level: "Скорее не удовлетворен", count: 24},
+                {level: "Поностью не удовлетворен", count: 5},
+                {level: "Затрудняюсь ответить", count: 2}
+            ],
+            satisfactionFactors: [
+                {factor: "Качество обслуживания", score: 3.3},
+                {factor: "Атмосфера", score: 3.3},
+                {factor: "Уровень цен", score: 3.2},
+                {factor: "Качество суши/роллов", score: 3.2},
+                {factor: "Размер порции", score: 3.2}
+            ],
+            importanceFactors: [
+                {factor: "Размер порции", percent: 24},
+                {factor: "Качество суши/роллов", percent: 22},
+                {factor: "Качество обслуживания", percent: 20},
+                {factor: "Уровень цен", percent: 18},
+                {factor: "Атмосфера", percent: 16}
+            ],
+            priceThresholds: [
+                {type: "Выше не купят (дорого)", price: 349, percent: 43.4},
+                {type: "Выше не купят (дорого)", price: 249, percent: 28.6},
+                {type: "Выше не купят (дорого)", price: 199, percent: 14.9},
+                {type: "Выше не купят (дорого)", price: 189, percent: 10.6},
+                {type: "Выше не купят (дорого)", price: 139, percent: 2.5},
+                {type: "Ниже не купят (качество)", price: 139, percent: 57.1},
+                {type: "Ниже не купят (качество)", price: 189, percent: 15.7},
+                {type: "Ниже не купят (качество)", price: 199, percent: 14.0},
+                {type: "Ниже не купят (качество)", price: 349, percent: 7.7},
+                {type: "Ниже не купят (качество)", price: 249, percent: 5.5}
+            ],
+            fairPrices: [
+                {price: 199, percent: 32.0},
+                {price: 189, percent: 27.4},
+                {price: 249, percent: 22.9},
+                {price: 139, percent: 10.0},
+                {price: 349, percent: 7.7}
+            ],
+            consumerProfile: [
+                {gender: "Мужской", age: "18-24", income: "12 000-19 000", preference: "колифорнию, с беконом и в кляре"},
+                {gender: "Женский", age: "18-24", income: "20 000-29 000", preference: "Филадельфия"},
+                {gender: "Женский", age: "18-24", income: "20 000-29 000", preference: "Дракон"},
+                // ... остальные данные профиля потребителей
+            ]
+        };
+        
+        // Функция для создания графика целей посещения
+        function createVisitPurposeChart() {
+            const data = [{
+                values: surveyData.visitPurpose.map(item => item.count),
+                labels: surveyData.visitPurpose.map(item => item.purpose),
+                type: 'pie',
+                textinfo: 'label+percent',
+                insidetextorientation: 'radial',
+                marker: {
+                    colors: ['#4CAF50', '#8BC34A', '#CDDC39']
+                }
+            }];
+            
+            const layout = {
+                title: 'Цели посещения суши-ресторанов',
+                height: 400
+            };
+            
+            Plotly.newPlot('visitPurposeChart', data, layout);
+        }
+        
+        // Функция для создания графика частоты посещения
+        function createVisitFrequencyChart() {
+            const data = [{
+                x: surveyData.visitFrequency.map(item => item.frequency),
+                y: surveyData.visitFrequency.map(item => item.count),
+                type: 'bar',
+                marker: {
+                    color: '#4CAF50'
+                }
+            }];
+            
+            const layout = {
+                title: 'Как часто посещают суши-рестораны',
+                xaxis: {title: 'Частота посещения'},
+                yaxis: {title: 'Количество человек'},
+                height: 400
+            };
+            
+            Plotly.newPlot('visitFrequencyChart', data, layout);
+        }
+        
+        // Функция для создания графика известных ресторанов
+        function createKnownRestaurantsChart(selectedRestaurant = 'all') {
+            let dataToShow = surveyData.knownRestaurants;
+            
+            if (selectedRestaurant !== 'all') {
+                dataToShow = dataToShow.filter(item => item.name === selectedRestaurant);
+            }
+            
+            const data = [{
+                x: dataToShow.map(item => item.name),
+                y: dataToShow.map(item => item.count),
+                type: 'bar',
+                marker: {
+                    color: '#2196F3'
+                }
+            }];
+            
+            const layout = {
+                title: 'Какие суши-рестораны знают в Омске',
+                xaxis: {title: 'Название ресторана'},
+                yaxis: {title: 'Количество человек'},
+                height: 400
+            };
+            
+            Plotly.newPlot('knownRestaurantsChart', data, layout);
+        }
+        
+        // Функция для создания графика посещаемых ресторанов
+        function createVisitedRestaurantsChart(selectedRestaurant = 'all') {
+            let dataToShow = surveyData.visitedRestaurants;
+            
+            if (selectedRestaurant !== 'all') {
+                dataToShow = dataToShow.filter(item => item.name === selectedRestaurant);
+            }
+            
+            const data = [{
+                x: dataToShow.map(item => item.name),
+                y: dataToShow.map(item => item.count),
+                type: 'bar',
+                marker: {
+                    color: '#3F51B5'
+                }
+            }];
+            
+            const layout = {
+                title: 'В какие суши-рестораны обычно ходят',
+                xaxis: {title: 'Название ресторана'},
+                yaxis: {title: 'Количество человек'},
+                height: 400
+            };
+            
+            Plotly.newPlot('visitedRestaurantsChart', data, layout);
+        }
+        
+        // Функция для создания графика наиболее посещаемых ресторанов
+        function createMostVisitedChart(selectedRestaurant = 'all') {
+            let dataToShow = surveyData.mostVisitedRestaurants;
+            
+            if (selectedRestaurant !== 'all') {
+                dataToShow = dataToShow.filter(item => item.name === selectedRestaurant);
+            }
+            
+            const data = [{
+                x: dataToShow.map(item => item.name),
+                y: dataToShow.map(item => item.count),
+                type: 'bar',
+                marker: {
+                    color: '#673AB7'
+                }
+            }];
+            
+            const layout = {
+                title: 'Какой суши-ресторан посещают чаще всего',
+                xaxis: {title: 'Название ресторана'},
+                yaxis: {title: 'Количество человек'},
+                height: 400
+            };
+            
+            Plotly.newPlot('mostVisitedChart', data, layout);
+        }
+        
+        // Функция для создания графика удовлетворенности
+        function createSatisfactionChart() {
+            const data = [{
+                x: surveyData.satisfaction.map(item => item.level),
+                y: surveyData.satisfaction.map(item => item.count),
+                type: 'bar',
+                marker: {
+                    color: '#FF9800'
+                }
+            }];
+            
+            const layout = {
+                title: 'Удовлетворенность рестораном, который посещают чаще всего',
+                xaxis: {title: 'Уровень удовлетворенности'},
+                yaxis: {title: 'Количество человек'},
+                height: 400
+            };
+            
+            Plotly.newPlot('satisfactionChart', data, layout);
+        }
+        
+        // Функция для создания графика факторов удовлетворенности
+        function createSatisfactionFactorsChart() {
+            const data = [{
+                x: surveyData.satisfactionFactors.map(item => item.factor),
+                y: surveyData.satisfactionFactors.map(item => item.score),
+                type: 'bar',
+                marker: {
+                    color: '#FF5722'
+                }
+            }];
+            
+            const layout = {
+                title: 'Удовлетворенность характеристиками ресторана (1-5 баллов)',
+                xaxis: {title: 'Характеристика'},
+                yaxis: {title: 'Средний балл'},
+                height: 400
+            };
+            
+            Plotly.newPlot('restaurantSatisfactionChart', data, layout);
+        }
+        
+        // Функция для создания графика важности характеристик
+        function createImportanceFactorsChart() {
+            const data = [{
+                x: surveyData.importanceFactors.map(item => item.factor),
+                y: surveyData.importanceFactors.map(item => item.percent),
+                type: 'bar',
+                marker: {
+                    color: '#009688'
+                }
+            }];
+            
+            const layout = {
+                title: 'Важность характеристик при выборе суши-ресторана',
+                xaxis: {title: 'Характеристика'},
+                yaxis: {title: 'Процент важности'},
+                height: 400
+            };
+            
+            Plotly.newPlot('priceImportanceChart', data, layout);
+        }
+        
+        // Функция для создания графика ценовых порогов
+        function createPriceThresholdsChart(minPrice = 100, maxPrice = 400) {
+            const highPrices = surveyData.priceThresholds.filter(item => item.type === "Выше не купят (дорого)");
+            const lowPrices = surveyData.priceThresholds.filter(item => item.type === "Ниже не купят (качество)");
+            
+            // Фильтрация по диапазону цен
+            highPrices = highPrices.filter(item => item.price >= minPrice && item.price <= maxPrice);
+            lowPrices = lowPrices.filter(item => item.price >= minPrice && item.price <= maxPrice);
+            
+            const trace1 = {
+                x: highPrices.map(item => item.price),
+                y: highPrices.map(item => item.percent),
+                name: 'Выше не купят (дорого)',
+                type: 'bar',
+                marker: {
+                    color: '#F44336'
+                }
+            };
+            
+            const trace2 = {
+                x: lowPrices.map(item => item.price),
+                y: lowPrices.map(item => item.percent),
+                name: 'Ниже не купят (качество)',
+                type: 'bar',
+                marker: {
+                    color: '#2196F3'
+                }
+            };
+            
+            const data = [trace1, trace2];
+            
+            const layout = {
+                title: 'Ценовые пороги за порцию "Калифорнии" (8 шт.)',
+                xaxis: {title: 'Цена (руб.)'},
+                yaxis: {title: 'Процент респондентов'},
+                barmode: 'group',
+                height: 400
+            };
+            
+            Plotly.newPlot('priceThresholdsChart', data, layout);
+        }
+        
+        // Функция для создания графика справедливых цен
+        function createFairPriceChart(minPrice = 100, maxPrice = 400) {
+            let dataToShow = surveyData.fairPrices.filter(item => item.price >= minPrice && item.price <= maxPrice);
+            
+            const data = [{
+                x: dataToShow.map(item => item.price),
+                y: dataToShow.map(item => item.percent),
+                type: 'bar',
+                marker: {
+                    color: '#4CAF50'
+                }
+            }];
+            
+            const layout = {
+                title: 'Справедливая цена за порцию "Калифорнии" (8 шт.)',
+                xaxis: {title: 'Цена (руб.)'},
+                yaxis: {title: 'Процент респондентов'},
+                height: 400
+            };
+            
+            Plotly.newPlot('fairPriceChart', data, layout);
+        }
+        
+        // Функция для создания графика демографии по полу
+        function createGenderChart(genderFilter = 'all', ageFilter = 'all', incomeFilter = 'all') {
+            // В реальном проекте здесь была бы фильтрация данных
+            const genders = {
+                "Мужской": 30,
+                "Женский": 70
+            };
+            
+            const data = [{
+                values: Object.values(genders),
+                labels: Object.keys(genders),
+                type: 'pie',
+                textinfo: 'label+percent',
+                insidetextorientation: 'radial',
+                marker: {
+                    colors: ['#2196F3', '#E91E63']
+                }
+            }];
+            
+            const layout = {
+                title: 'Распределение по полу',
+                height: 400
+            };
+            
+            Plotly.newPlot('genderChart', data, layout);
+        }
+        
+        // Функция для создания графика демографии по возрасту
+        function createAgeChart(genderFilter = 'all', ageFilter = 'all', incomeFilter = 'all') {
+            // В реальном проекте здесь была бы фильтрация данных
+            const ages = {
+                "18-24": 75,
+                "25-34": 15,
+                "35-44": 7,
+                "45-54": 2,
+                "55-64": 1,
+                "Больше 65": 0
+            };
+            
+            const data = [{
+                x: Object.keys(ages),
+                y: Object.values(ages),
+                type: 'bar',
+                marker: {
+                    color: '#673AB7'
+                }
+            }];
+            
+            const layout = {
+                title: 'Распределение по возрасту',
+                xaxis: {title: 'Возрастная группа'},
+                yaxis: {title: 'Процент'},
+                height: 400
+            };
+            
+            Plotly.newPlot('ageChart', data, layout);
+        }
+        
+        // Функция для создания графика демографии по доходу
+        function createIncomeChart(genderFilter = 'all', ageFilter = 'all', incomeFilter = 'all') {
+            // В реальном проекте здесь была бы фильтрация данных
+            const incomes = {
+                "12 000-19 000": 40,
+                "20 000-29 000": 30,
+                "30 000-39 000": 15,
+                "40 000-49 000": 7,
+                "50 000-59 000": 5,
+                "Более 60 000": 3
+            };
+            
+            const data = [{
+                x: Object.keys(incomes),
+                y: Object.values(incomes),
+                type: 'bar',
+                marker: {
+                    color: '#FF9800'
+                }
+            }];
+            
+            const layout = {
+                title: 'Распределение по доходу',
+                xaxis: {title: 'Доход (руб.)'},
+                yaxis: {title: 'Процент'},
+                height: 400
+            };
+            
+            Plotly.newPlot('incomeChart', data, layout);
+        }
+        
+        // Функция для создания графика предпочтений по суши
+        function createSushiPreferenceChart(genderFilter = 'all', ageFilter = 'all', incomeFilter = 'all') {
+            // В реальном проекте здесь была бы фильтрация данных
+            const preferences = {
+                "Филадельфия": 45,
+                "Калифорния": 25,
+                "Запеченные": 15,
+                "Горячие": 10,
+                "Другие": 5
+            };
+            
+            const data = [{
+                values: Object.values(preferences),
+                labels: Object.keys(preferences),
+                type: 'pie',
+                textinfo: 'label+percent',
+                insidetextorientation: 'radial',
+                marker: {
+                    colors: ['#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B', '#FFC107']
+                }
+            }];
+            
+            const layout = {
+                title: 'Какие суши/роллы любят больше всего',
+                height: 400
+            };
+            
+            Plotly.newPlot('sushiPreferenceChart', data, layout);
+        }
+        
+        // Функция для загрузки таблицы с данными
+        function loadDataTable() {
+            const dataType = document.getElementById('dataType').value;
+            let html = '<table class="data-table"><tr>';
+            
+            if (dataType === 'results') {
+                // Заголовки для результатов опроса
+                html += '<th>Цель посещения</th><th>Кол-во</th><th>Частота посещения</th><th>Кол-во</th>';
+                html += '</tr>';
+                
+                // Данные (в реальном проекте можно загружать из файла)
+                html += '<tr><td>Провести время с друзьями</td><td>177</td><td>1-2 раза в месяц</td><td>264</td></tr>';
+                html += '<tr><td>Не хочется готовить</td><td>79</td><td>Каждый день</td><td>29</td></tr>';
+                html += '<tr><td>Попробовать что-то новое</td><td>93</td><td>Чаще 3 раз в месяц</td><td>56</td></tr>';
+            } else {
+                // Заголовки для профиля потребителей
+                html += '<th>Пол</th><th>Возраст</th><th>Доход</th><th>Предпочтения в суши</th>';
+                html += '</tr>';
+                
+                // Данные (в реальном проекте можно загружать из файла)
+                html += '<tr><td>Мужской</td><td>18-24</td><td>12 000-19 000</td><td>колифорнию, с беконом и в кляре</td></tr>';
+                html += '<tr><td>Женский</td><td>18-24</td><td>20 000-29 000</td><td>Филадельфия</td></tr>';
+                html += '<tr><td>Женский</td><td>18-24</td><td>20 000-29 000</td><td>Дракон</td></tr>';
+            }
+            
+            html += '</table>';
+            document.getElementById('dataTableContainer').innerHTML = html;
+        }
+        
+        // Функции для обновления графиков при фильтрации
+        function updateOverviewCharts() {
+            createVisitPurposeChart();
+            createVisitFrequencyChart();
+            createSatisfactionChart();
+        }
+        
+        function updateRestaurantCharts() {
+            const selectedRestaurant = document.getElementById('restaurantFilter').value;
+            createKnownRestaurantsChart(selectedRestaurant);
+            createVisitedRestaurantsChart(selectedRestaurant);
+            createMostVisitedChart(selectedRestaurant);
+            createSatisfactionFactorsChart();
+        }
+        
+        function updatePriceCharts() {
+            const minPrice = parseInt(document.getElementById('minPrice').value) || 100;
+            const maxPrice = parseInt(document.getElementById('maxPrice').value) || 400;
+            createPriceThresholdsChart(minPrice, maxPrice);
+            createFairPriceChart(minPrice, maxPrice);
+            createImportanceFactorsChart();
+        }
+        
+        function updateConsumerCharts() {
+            const genderFilter = document.getElementById('genderFilter').value;
+            const ageFilter = document.getElementById('ageFilter').value;
+            const incomeFilter = document.getElementById('incomeFilter').value;
+            createGenderChart(genderFilter, ageFilter, incomeFilter);
+            createAgeChart(genderFilter, ageFilter, incomeFilter);
+            createIncomeChart(genderFilter, ageFilter, incomeFilter);
+            createSushiPreferenceChart(genderFilter, ageFilter, incomeFilter);
+        }
+        
+        // Инициализация dashboard при загрузке страницы
+        window.onload = function() {
+            updateOverviewCharts();
+            loadDataTable();
+        };
+    </script>
+</body>
+</html>
